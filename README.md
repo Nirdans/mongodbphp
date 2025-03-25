@@ -2,6 +2,26 @@
 
 Ce document est un guide de référence pour l'utilisation des requêtes MongoDB avec PHP, expliquant les différents opérateurs et leur syntaxe.
 
+## Connexion à MongoDB avec PHP
+
+Voici le code de base pour se connecter à MongoDB et sélectionner une collection:
+
+```php
+// Inclure l'autoloader Composer
+require 'vendor/autoload.php';
+
+// Établir la connexion au serveur MongoDB
+$client = new MongoDB\Client("mongodb://localhost:27017");
+
+// Sélectionner la base de données "Other"
+$db = $client->Other;
+
+// Sélectionner la collection "test_users"
+$collection = $db->test_users;
+```
+
+Cette connexion sera utilisée dans tous les exemples de ce guide.
+
 ## Table des matières
 1. [Opérateurs de comparaison](#1-opérateurs-de-comparaison)
 2. [Opérateurs logiques](#2-opérateurs-logiques)
