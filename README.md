@@ -25,10 +25,13 @@ Cette connexion sera utilisée dans tous les exemples de ce guide.
 ## Table des matières
 1. [Opérateurs de comparaison](#1-opérateurs-de-comparaison)
 2. [Opérateurs logiques](#2-opérateurs-logiques)
-3. [Opérateurs d'élément](#3-opérateurs-délément)
+3. [Opérateurs d'élément](#3-opérateurs-d'élément)
 4. [Opérateurs de tableau](#4-opérateurs-de-tableau)
 5. [Opérateurs de projection](#5-opérateurs-de-projection)
-6. [Exemples de requêtes complètes](#6-exemples-de-requêtes-complètes)
+6. [Opérations d'insertion](#6-opérations-dinsertion)
+7. [Opérations de mise à jour](#7-opérations-de-mise-à-jour)
+8. [Opérations de suppression](#8-opérations-de-suppression)
+9. [Exemples de requêtes complètes](#9-exemples-de-requêtes-complètes)
 
 ## 1. Opérateurs de comparaison
 
@@ -158,7 +161,206 @@ $collection->find(
 );
 ```
 
-## 6. Exemples de requêtes complètes
+## 6. Opérations d'insertion
+
+### 6.1 Insérer un document unique
+
+```php
+// Insertion d'un seul document
+$document = [
+    'id' => 1,
+    'Name' => 'John Doe',
+    'age' => 28,
+    'email' => 'john.doe@example.com',
+    'date_creation' => new MongoDB\BSON\UTCDateTime()
+];
+
+$result = $collection->insertOne($document);
+
+// Vérifier le résultat
+if ($result->getInsertedCount() > 0) {
+    echo "Document inséré avec succès. ID: " . $result->getInsertedId();
+} else {
+    echo "Échec de l'insertion";
+}
+```
+
+### 6.2 Insérer plusieurs documents
+
+```php
+// Insertion de plusieurs documents à la fois
+$documents = [
+    [
+        'id' => 2,
+        'Name' => 'Jane Smith',
+        'age' => 35,
+        'email' => 'jane.smith@example.com'
+    ],
+    [
+        'id' => 3,
+        'Name' => 'Robert Johnson',
+        'age' => 42,
+        'email' => 'robert.johnson@example.com'
+    ]
+];
+
+$result = $collection->insertMany($documents);
+
+echo "Nombre de documents insérés: " . $result->getInsertedCount();
+echo "IDs insérés: ";
+foreach ($result->getInsertedIds() as $id) {
+    echo $id . ", ";
+}
+```
+
+### 6.3 Insertion ordonnée et non ordonnée
+
+```php
+// Par défaut, insertMany s'arrête à la première erreur (ordonnée)
+// Avec ordered: false, il continue même en cas d'erreur
+$result = $collection->insertMany($documents, ['ordered' => false]);
+```
+
+## 7. Opérations de mise à jour
+
+### 7.1 Opérateurs de mise à jour
+
+| Opérateur | Description | Exemple |
+|-----------|-------------|---------|
+| `$set` | Définit la valeur d'un champ | `['$set' => ['field' => value]]` |
+| `$unset` | Supprime un champ | `['$unset' => ['field' => '']]` |
+| `$inc` | Incrémente la valeur d'un champ | `['$inc' => ['field' => amount]]` |
+| `$mul` | Multiplie la valeur d'un champ | `['$mul' => ['field' => number]]` |
+| `$rename` | Renomme un champ | `['$rename' => ['old_name' => 'new_name']]` |
+| `$push` | Ajoute un élément à un tableau | `['$push' => ['array' => value]]` |
+| `$pull` | Supprime des éléments d'un tableau | `['$pull' => ['array' => value]]` |
+| `$addToSet` | Ajoute un élément à un tableau (sans doublon) | `['$addToSet' => ['array' => value]]` |
+| `$currentDate` | Définit un champ à la date actuelle | `['$currentDate' => ['field' => true]]` |
+
+### 7.2 Mettre à jour un seul document
+
+```php
+// Mettre à jour un document
+$filter = ['id' => 1];
+$update = [
+    '$set' => [
+        'Name' => 'John Doe Updated',
+        'age' => 29
+    ],
+    '$currentDate' => ['derniere_modification' => true]
+];
+
+$result = $collection->updateOne($filter, $update);
+
+echo "Documents trouvés: " . $result->getMatchedCount();
+echo "Documents modifiés: " . $result->getModifiedCount();
+```
+
+### 7.3 Mettre à jour plusieurs documents
+
+```php
+// Mettre à jour plusieurs documents
+$filter = ['age' => ['$lt' => 40]];
+$update = [
+    '$set' => ['categorie' => 'jeune'],
+    '$inc' => ['score' => 5]
+];
+
+$result = $collection->updateMany($filter, $update);
+
+echo "Documents trouvés: " . $result->getMatchedCount();
+echo "Documents modifiés: " . $result->getModifiedCount();
+```
+
+### 7.4 Upsert (mise à jour ou insertion)
+
+```php
+// Upsert - insère si le document n'existe pas
+$filter = ['id' => 4]; // Document inexistant
+$update = [
+    '$set' => [
+        'id' => 4,
+        'Name' => 'New User',
+        'age' => 25
+    ]
+];
+$options = ['upsert' => true];
+
+$result = $collection->updateOne($filter, $update, $options);
+
+if ($result->getUpsertedCount()) {
+    echo "Document inséré avec ID: " . $result->getUpsertedId();
+} else {
+    echo "Document mis à jour";
+}
+```
+
+### 7.5 Remplacer un document
+
+```php
+// Remplacer complètement un document
+$filter = ['id' => 2];
+$replacement = [
+    'id' => 2,
+    'Name' => 'Jane Smith Replaced',
+    'profile' => 'Completely new document'
+    // Note: tous les autres champs sont supprimés
+];
+
+$result = $collection->replaceOne($filter, $replacement);
+
+echo "Documents modifiés: " . $result->getModifiedCount();
+```
+
+## 8. Opérations de suppression
+
+### 8.1 Supprimer un document
+
+```php
+// Supprimer un seul document
+$filter = ['id' => 1];
+
+$result = $collection->deleteOne($filter);
+
+echo "Documents supprimés: " . $result->getDeletedCount();
+```
+
+### 8.2 Supprimer plusieurs documents
+
+```php
+// Supprimer plusieurs documents
+$filter = ['age' => ['$lt' => 30]];
+
+$result = $collection->deleteMany($filter);
+
+echo "Documents supprimés: " . $result->getDeletedCount();
+```
+
+### 8.3 Supprimer tous les documents d'une collection
+
+```php
+// Supprimer tous les documents (attention!)
+$result = $collection->deleteMany([]);
+
+echo "Tous les documents ont été supprimés: " . $result->getDeletedCount();
+```
+
+### 8.4 findOneAndDelete
+
+```php
+// Supprimer un document et le récupérer
+$filter = ['id' => 3];
+$options = [
+    'sort' => ['id' => 1]
+];
+
+$deletedDoc = $collection->findOneAndDelete($filter, $options);
+
+echo "Document supprimé: ";
+print_r($deletedDoc);
+```
+
+## 9. Exemples de requêtes complètes
 
 ### Exemple 1: Filtrage multi-critères avec tri
 
